@@ -10,6 +10,7 @@ Release:	1%{?dist}
 Summary:	A painless self-hosted Git service
 License:	MIT
 URL:		https://gitea.io
+
 Source0:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-src-%{version}.tar.gz
 Source1:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-docs-%{version}.tar.gz
 Source2:	gitea.service
@@ -19,15 +20,16 @@ Source5:  gitea.httpd
 Source6:  gitea.nginx
 Source7:  gitea.caddy
 Source8:  gitea.sysusers
+Source9:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64
+
 
 Patch1:		0001-gitea.app.ini.patch
-#Patch2:		0001-makefile.patch
 
 BuildRequires:	systemd
-BuildRequires:	go >= 1.17.0
+BuildRequires:	golang
 BuildRequires:	git
 BuildRequires:	make
-BuildRequires:	nodejs-devel >= 16.0.0
+BuildRequires:	nodejs-devel
 BuildRequires:	npm
 BuildRequires:	go-srpm-macros
 BuildRequires:	pam-devel
@@ -91,14 +93,16 @@ install -m 0644 %{SOURCE4} .
 for file in $(find . -type f -name "*.css"); do
   chmod -x ${file}
 done
+ls 
 
 %build
-# Default support for sqlite and pam (not provided by upstream by default)
-export TAGS="sqlite sqlite_unlock_notify pam"
-export LDFLAGS="-s -w -X \"main.Version=%{version}\" -X \"code.gitea.io/gitea/modules/setting.CustomPath=/etc/gitea\" -X \"code.gitea.io/gitea/modules/setting.AppWorkPath=/var/lib/gitea\""
+## Default support for sqlite and pam (not provided by upstream by default)
+#export TAGS="sqlite sqlite_unlock_notify pam"
+#export LDFLAGS="-s -w -X \"main.Version=%{version}\" -X \"code.gitea.io/gitea/modules/setting.CustomPath=/etc/gitea\" -X \"code.gitea.io/gitea/modules/setting.AppWorkPath=/var/lib/gitea\""
 
 # Probably not needed, but just in case I guess.
-TAGS="${TAGS}" LDFLAGS="${LDFLAGS}" make build
+#TAGS="${TAGS}" LDFLAGS="${LDFLAGS}" make build
+cp %{SOURCE9} gitea
 
 %install
 install -D -m 755 gitea $RPM_BUILD_ROOT%{_bindir}/gitea
