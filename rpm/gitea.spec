@@ -1,6 +1,6 @@
 %global major_version 1
 %global minor_version 21
-%global micro_version 3
+%global micro_version 4
 
 %define debug_package %{nil}
 
@@ -152,7 +152,7 @@ EOF
 %else
 %{_sbindir}/groupadd -r git 2>/dev/null || :
 %{_sbindir}/useradd -r -g git \
-  -s /sbin/nologin -d %{_datadir}/%{name} \
+  -s /bin/bash -d %{_datadir}/%{name} \
   -c 'Gitea' git 2>/dev/null || :
 %endif
 
@@ -201,6 +201,12 @@ systemd-tmpfiles --create %{name}.conf || :
 %{_datadir}/%{name}/docs.gitea.io
 
 %changelog
+* Tue Jan 16 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.4-1
+- Update to 1.21.4
+
+* Sat Jan 06 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.3-2
+- Change git user shell to /bin/bash
+
 * Thu Dec 21 2023 Louis Abel <tucklesepk@gmail.com> - 1.21.3-1
 - Update to 1.21.3
 
