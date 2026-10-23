@@ -224,6 +224,16 @@ systemd-tmpfiles --create %{name}.conf || :
 #{_datadir}/%{name}/docs.gitea.io
 
 %changelog
+* Thu Oct 23 2026 Benjamin Lamb <bennyfactor@iaatb.net> - 28.2.0-1
+- Update to 28.2.0 (upstream dropped the leading "1." after 1.27.x)
+- Merge nazunalika/rpmspecs-gitea at 1.23.4 (docs subpackage dropped upstream,
+  profile.d GITEA_CUSTOM, autopatch)
+- Install upstream prebuilt binary for x86_64/aarch64, verified by sha256,
+  instead of compiling (no PAM support in the prebuilt binary)
+- Fix APP_DATA_PATH to /var/lib/gitea/data
+- Set GITEA_CUSTOM=/etc/gitea in the systemd unit
+- Require git >= 2.25.0
+
 * Tue Feb 18 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.4-1
 - Update to 1.23.4
 

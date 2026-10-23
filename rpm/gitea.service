@@ -25,7 +25,7 @@ Group=git
 WorkingDirectory=/var/lib/gitea/
 ExecStart=/usr/bin/gitea web --config /etc/gitea/conf/app.ini
 Restart=always
-Environment=USER=git HOME=/usr/share/gitea GITEA_WORK_DIR=/var/lib/gitea
+Environment=USER=git HOME=/usr/share/gitea GITEA_WORK_DIR=/var/lib/gitea GITEA_CUSTOM=/etc/gitea
 
 # If you plan on binding Gitea to a port lower than 1024 (not recommended),
 # uncomment the below.
