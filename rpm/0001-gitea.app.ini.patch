@@ -1,8 +1,6 @@
-diff --git a/custom/conf/app.example.ini b/custom/conf/app.example.ini
-index 4e896c7baa..513910d572 100644
 --- a/custom/conf/app.example.ini
 +++ b/custom/conf/app.example.ini
-@@ -279,10 +279,10 @@ RUN_USER = ; git
+@@ -285,10 +285,10 @@
  ;;
  ;; Root directory containing templates and static files.
  ;; default is the path where Gitea is executed
@@ -11,14 +9,14 @@ index 4e896c7baa..513910d572 100644
  ;;
  ;; Default path for App data
 -;APP_DATA_PATH = data ; relative paths will be made absolute with _`AppWorkPath`_
-+APP_DATA_PATH = /usr/lib/gitea/data
++APP_DATA_PATH = /var/lib/gitea/data
  ;;
- ;; Enable gzip compression for runtime-generated content, static resources excluded
- ;ENABLE_GZIP = false
-@@ -569,14 +569,14 @@ ENABLED = true
+ ;; Base path for App's temp files, leave empty to use the managed tmp directory in APP_DATA_PATH
+ ;APP_TEMP_PATH =
+@@ -652,14 +652,14 @@
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
- ;; Root path for the log files - defaults to %(GITEA_WORK_DIR)/log
+ ;; Root path for the log files - defaults to "{AppWorkPath}/log"
 -;ROOT_PATH =
 +ROOT_PATH = /var/log/gitea
  ;;

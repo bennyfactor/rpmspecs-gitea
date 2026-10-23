@@ -1,6 +1,7 @@
-%global major_version 1
-%global minor_version 23
-%global micro_version 4
+# Upstream dropped the leading "1." after 1.27.x; 28.x follows 1.27.x.
+%global major_version 28
+%global minor_version 2
+%global micro_version 0
 
 %define debug_package %{nil}
 
