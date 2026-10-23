@@ -1,6 +1,16 @@
-%global major_version 1
-%global minor_version 21
-%global micro_version 4
+# Upstream dropped the leading "1." after 1.27.x; 28.x follows 1.27.x.
+%global major_version 28
+%global minor_version 2
+%global micro_version 0
+
+# Upstream's GOARCH name for the build architecture. To support another arch,
+# add an %%ifarch block here, a Source pair below, and the arch to ExclusiveArch.
+%ifarch x86_64
+%global goarch amd64
+%endif
+%ifarch aarch64
+%global goarch arm64
+%endif
 
 %define debug_package %{nil}
 
@@ -10,9 +20,10 @@ Release:	1%{?dist}
 Summary:	A painless self-hosted Git service
 License:	MIT
 URL:		https://gitea.io
+ExclusiveArch:	x86_64 aarch64
 
 Source0:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-src-%{version}.tar.gz
-Source1:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-docs-%{version}.tar.gz
+#Source1:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-docs-%{version}.tar.gz
 Source2:	gitea.service
 Source3:  gitea.firewalld
 Source4:  README.EL+Fedora
@@ -20,20 +31,21 @@ Source5:  gitea.httpd
 Source6:  gitea.nginx
 Source7:  gitea.caddy
 Source8:  gitea.sysusers
-Source9:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64
-
+Source9:  gitea.profile.sh
+Source10:  gitea.profile.csh
+# Upstream prebuilt binaries (xz-compressed) and their checksums, one pair per
+# supported arch. All are embedded in the SRPM; %%prep picks the one for %%{_arch}.
+Source20: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64.xz
+Source21: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64.xz.sha256
+Source22: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-arm64.xz
+Source23: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-arm64.xz.sha256
 
 Patch1:		0001-gitea.app.ini.patch
 
 BuildRequires:	systemd
-BuildRequires:	golang
-BuildRequires:	git
-BuildRequires:	make
-BuildRequires:	nodejs-devel
-BuildRequires:	npm
-BuildRequires:	go-srpm-macros
-BuildRequires:	pam-devel
+BuildRequires:	xz
 Requires:	git
+Requires:	git >= 2.25.0
 Requires:	systemd
 Requires: openssh-server
 Requires(pre):	shadow-utils
@@ -42,6 +54,8 @@ Requires(postun):	systemd
 Requires(preun):	systemd
 
 Conflicts:	git-web
+# The docs subpackage went away with 1.23.0 (upstream moved docs to gitea.com/gitea/docs)
+Obsoletes:	gitea-docs < 1.23.0
 
 # Suggesting httpd for now
 Suggests:	httpd
@@ -79,30 +93,36 @@ Requires: caddy >= 2.0.0
 This subpackage contains an caddy configuration file that can be used to reverse
 proxy for Gitea.
 
-%package docs
-Summary: Documentation for %{name}
+#package docs
+#Summary: Documentation for %{name}
 
-%description docs
-This subpackage contains the Gitea documentation from https://docs.gitea.io
+#%description docs
+#This subpackage contains the Gitea documentation from https://docs.gitea.io
 
 %prep
 %setup -q -n %{name}-src-%{version}
-%patch1 -p1
+%autopatch -p1
 
 install -m 0644 %{SOURCE4} .
+
+# Select, verify and unpack the upstream prebuilt binary for this arch
+%ifarch x86_64
+cp -p %{SOURCE20} %{SOURCE21} .
+%endif
+%ifarch aarch64
+cp -p %{SOURCE22} %{SOURCE23} .
+%endif
+sha256sum -c %{name}-%{version}-linux-%{goarch}.xz.sha256
+xz -d %{name}-%{version}-linux-%{goarch}.xz
+mv %{name}-%{version}-linux-%{goarch} gitea
+chmod 0755 gitea
 for file in $(find . -type f -name "*.css"); do
   chmod -x ${file}
 done
 ls 
 
 %build
-## Default support for sqlite and pam (not provided by upstream by default)
-#export TAGS="sqlite sqlite_unlock_notify pam"
-#export LDFLAGS="-s -w -X \"main.Version=%{version}\" -X \"code.gitea.io/gitea/modules/setting.CustomPath=/etc/gitea\" -X \"code.gitea.io/gitea/modules/setting.AppWorkPath=/var/lib/gitea\""
-
-# Probably not needed, but just in case I guess.
-#TAGS="${TAGS}" LDFLAGS="${LDFLAGS}" make build
-cp %{SOURCE9} gitea
+# Nothing to build: the upstream prebuilt binary is unpacked in %%prep.
 
 %install
 install -D -m 755 gitea $RPM_BUILD_ROOT%{_bindir}/gitea
@@ -124,6 +144,7 @@ mkdir -p $RPM_BUILD_ROOT%{_datadir}/gitea \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/data/avatars \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/data/attachments \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/data/repo-avatars \
+  $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/https \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/indexers \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/indexers/issues.bleve \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/indexers/issues.queue \
@@ -137,13 +158,15 @@ cp -r options $RPM_BUILD_ROOT%{_datadir}/gitea/
 cp -r public $RPM_BUILD_ROOT%{_datadir}/gitea/
 cp -r templates $RPM_BUILD_ROOT%{_datadir}/gitea/
 #cp -r web_src/less $RPM_BUILD_ROOT%{_datadir}/gitea/public
-install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/docs.gitea.io/
-tar -xvzf %{SOURCE1} -C $RPM_BUILD_ROOT%{_datadir}/%{name}/docs.gitea.io
+#install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/docs.gitea.io/
 
 mkdir -p $RPM_BUILD_ROOT%{_tmpfilesdir}/
 cat > $RPM_BUILD_ROOT%{_tmpfilesdir}/%{name}.conf <<EOF
 d /run/gitea 0755 git git -
 EOF
+
+install -D -m 644 %{SOURCE9} %{buildroot}%{_sysconfdir}/profile.d/gitea.sh
+install -D -m 644 %{SOURCE10} %{buildroot}%{_sysconfdir}/profile.d/gitea.csh
 
 %pre
 # Not official
@@ -169,12 +192,14 @@ systemd-tmpfiles --create %{name}.conf || :
 %files
 %doc README.EL+Fedora README.md custom/conf/app.example.ini
 %license LICENSE
-%exclude %{_datadir}/%{name}/docs.gitea.io
+#exclude %{_datadir}/%{name}/docs.gitea.io
 %{_unitdir}/gitea.service
 %{_bindir}/gitea
 %{_prefix}/lib/firewalld/services/%{name}.xml
 %{_tmpfilesdir}/%{name}.conf
 %{_sysusersdir}/%{name}.conf
+# setting this as config as users may manipulate it
+%config %{_sysconfdir}/profile.d/gitea.*sh
 
 %defattr(0660,root,git,770)
 %dir %{_sysconfdir}/gitea
@@ -197,10 +222,51 @@ systemd-tmpfiles --create %{name}.conf || :
 %files caddy
 %config(noreplace) %{_sysconfdir}/caddy/Caddyfile.d/%{name}.caddyfile
 
-%files docs
-%{_datadir}/%{name}/docs.gitea.io
+#files docs
+#{_datadir}/%{name}/docs.gitea.io
 
 %changelog
+* Fri Oct 23 2026 Benjamin Lamb <bennyfactor@iaatb.net> - 28.2.0-1
+- Update to 28.2.0 (upstream dropped the leading "1." after 1.27.x)
+- Merge nazunalika/rpmspecs-gitea at 1.23.4 (docs subpackage dropped upstream,
+  profile.d GITEA_CUSTOM, autopatch)
+- Install upstream prebuilt binary for x86_64/aarch64, verified by sha256,
+  instead of compiling (no PAM support in the prebuilt binary)
+- Fix APP_DATA_PATH to /var/lib/gitea/data
+- Set GITEA_CUSTOM=/etc/gitea in the systemd unit. UPGRADE NOTE: the custom path moves
+  from /var/lib/gitea/custom to /etc/gitea; move any custom/ contents there and use
+  absolute CERT_FILE/KEY_FILE paths. Back up before upgrading: the service restarts
+  into the new version and runs database migrations.
+- Require git >= 2.25.0
+- Obsolete the gitea-docs subpackage (upstream stopped shipping docs in 1.23.0)
+
+* Tue Feb 18 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.4-1
+- Update to 1.23.4
+
+* Wed Feb 05 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.2-1
+- Update to 1.23.2
+
+* Thu Jan 09 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.0-1
+- Update to 1.23.0
+
+* Wed Dec 11 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.5-1
+- Update to 1.22.5
+
+* Mon Nov 25 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.4-1
+- Update to 1.22.4
+
+* Thu Nov 07 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.3-1
+- Update to 1.22.3
+
+* Fri May 31 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.0-1
+- Update to 1.22.0
+
+* Mon Apr 15 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.11-1
+- Update to 1.21.11
+
+* Mon Feb 26 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.7-1
+- Update to 1.21.7
+
 * Tue Jan 16 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.4-1
 - Update to 1.21.4
 
