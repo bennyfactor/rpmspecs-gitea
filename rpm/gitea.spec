@@ -54,6 +54,8 @@ Requires(postun):	systemd
 Requires(preun):	systemd
 
 Conflicts:	git-web
+# The docs subpackage went away with 1.23.0 (upstream moved docs to gitea.com/gitea/docs)
+Obsoletes:	gitea-docs < 1.23.0
 
 # Suggesting httpd for now
 Suggests:	httpd
@@ -236,6 +238,7 @@ systemd-tmpfiles --create %{name}.conf || :
   absolute CERT_FILE/KEY_FILE paths. Back up before upgrading: the service restarts
   into the new version and runs database migrations.
 - Require git >= 2.25.0
+- Obsolete the gitea-docs subpackage (upstream stopped shipping docs in 1.23.0)
 
 * Tue Feb 18 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.4-1
 - Update to 1.23.4
