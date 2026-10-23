@@ -224,7 +224,7 @@ systemd-tmpfiles --create %{name}.conf || :
 #{_datadir}/%{name}/docs.gitea.io
 
 %changelog
-* Thu Oct 23 2026 Benjamin Lamb <bennyfactor@iaatb.net> - 28.2.0-1
+* Fri Oct 23 2026 Benjamin Lamb <bennyfactor@iaatb.net> - 28.2.0-1
 - Update to 28.2.0 (upstream dropped the leading "1." after 1.27.x)
 - Merge nazunalika/rpmspecs-gitea at 1.23.4 (docs subpackage dropped upstream,
   profile.d GITEA_CUSTOM, autopatch)
