@@ -73,3 +73,20 @@ with podman (no mock needed)::
 
     scripts/container-build.sh el8          # full build into build/el8/
     scripts/container-build.sh el9 -bp      # %prep only on AlmaLinux 9
+
+Upgrading from older packages of this fork
+++++++++++++++++++++++++++++++++++++++++++
+
+The 1.20.x/1.21.x packages from this fork ran without ``GITEA_CUSTOM``, so Gitea
+used ``/var/lib/gitea/custom`` as its custom path. From 28.2.0-1 the unit sets
+``GITEA_CUSTOM=/etc/gitea``. Before upgrading:
+
+* **Back up** the database and ``/var/lib/gitea``. The package restarts the service
+  after upgrade and Gitea runs its database migrations on first start.
+* Move anything under ``/var/lib/gitea/custom/`` (templates, ``public/``, ``options/``,
+  ``robots.txt``) to ``/etc/gitea/``.
+* If ``CERT_FILE``/``KEY_FILE`` in ``app.ini`` are relative (the default
+  ``https/cert.pem``), they now resolve under ``/etc/gitea``; make them absolute or move
+  the files.
+* To hold a host on the old version until you are ready, ``dnf versionlock add gitea``
+  or add ``exclude=gitea`` to the Copr repo file.

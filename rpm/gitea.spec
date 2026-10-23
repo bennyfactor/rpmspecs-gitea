@@ -231,7 +231,10 @@ systemd-tmpfiles --create %{name}.conf || :
 - Install upstream prebuilt binary for x86_64/aarch64, verified by sha256,
   instead of compiling (no PAM support in the prebuilt binary)
 - Fix APP_DATA_PATH to /var/lib/gitea/data
-- Set GITEA_CUSTOM=/etc/gitea in the systemd unit
+- Set GITEA_CUSTOM=/etc/gitea in the systemd unit. UPGRADE NOTE: the custom path moves
+  from /var/lib/gitea/custom to /etc/gitea; move any custom/ contents there and use
+  absolute CERT_FILE/KEY_FILE paths. Back up before upgrading: the service restarts
+  into the new version and runs database migrations.
 - Require git >= 2.25.0
 
 * Tue Feb 18 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.4-1
