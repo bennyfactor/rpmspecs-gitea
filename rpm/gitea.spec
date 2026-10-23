@@ -3,6 +3,15 @@
 %global minor_version 2
 %global micro_version 0
 
+# Upstream's GOARCH name for the build architecture. To support another arch,
+# add an %%ifarch block here, a Source pair below, and the arch to ExclusiveArch.
+%ifarch x86_64
+%global goarch amd64
+%endif
+%ifarch aarch64
+%global goarch arm64
+%endif
+
 %define debug_package %{nil}
 
 Name:		gitea
@@ -11,6 +20,7 @@ Release:	1%{?dist}
 Summary:	A painless self-hosted Git service
 License:	MIT
 URL:		https://gitea.io
+ExclusiveArch:	x86_64 aarch64
 
 Source0:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-src-%{version}.tar.gz
 #Source1:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-docs-%{version}.tar.gz
@@ -23,18 +33,19 @@ Source7:  gitea.caddy
 Source8:  gitea.sysusers
 Source9:  gitea.profile.sh
 Source10:  gitea.profile.csh
+# Upstream prebuilt binaries (xz-compressed) and their checksums, one pair per
+# supported arch. All are embedded in the SRPM; %%prep picks the one for %%{_arch}.
+Source20: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64.xz
+Source21: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64.xz.sha256
+Source22: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-arm64.xz
+Source23: https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-arm64.xz.sha256
 
 Patch1:		0001-gitea.app.ini.patch
 
 BuildRequires:	systemd
-BuildRequires:	golang
-BuildRequires:	git
-BuildRequires:	make
-BuildRequires:	nodejs-devel
-BuildRequires:	npm
-BuildRequires:	go-srpm-macros
-BuildRequires:	pam-devel
+BuildRequires:	xz
 Requires:	git
+Requires:	git >= 2.25.0
 Requires:	systemd
 Requires: openssh-server
 Requires(pre):	shadow-utils
@@ -91,19 +102,25 @@ proxy for Gitea.
 %autopatch -p1
 
 install -m 0644 %{SOURCE4} .
+
+# Select, verify and unpack the upstream prebuilt binary for this arch
+%ifarch x86_64
+cp -p %{SOURCE20} %{SOURCE21} .
+%endif
+%ifarch aarch64
+cp -p %{SOURCE22} %{SOURCE23} .
+%endif
+sha256sum -c %{name}-%{version}-linux-%{goarch}.xz.sha256
+xz -d %{name}-%{version}-linux-%{goarch}.xz
+mv %{name}-%{version}-linux-%{goarch} gitea
+chmod 0755 gitea
 for file in $(find . -type f -name "*.css"); do
   chmod -x ${file}
 done
 ls 
 
 %build
-## Default support for sqlite and pam (not provided by upstream by default)
-#export TAGS="sqlite sqlite_unlock_notify pam"
-#export LDFLAGS="-s -w -X \"main.Version=%{version}\" -X \"code.gitea.io/gitea/modules/setting.CustomPath=/etc/gitea\" -X \"code.gitea.io/gitea/modules/setting.AppWorkPath=/var/lib/gitea\""
-
-# Probably not needed, but just in case I guess.
-#TAGS="${TAGS}" LDFLAGS="${LDFLAGS}" make build
-# prebuilt binary is prepared in %%prep (see below)
+# Nothing to build: the upstream prebuilt binary is unpacked in %%prep.
 
 %install
 install -D -m 755 gitea $RPM_BUILD_ROOT%{_bindir}/gitea
