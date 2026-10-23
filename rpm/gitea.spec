@@ -1,5 +1,5 @@
 %global major_version 1
-%global minor_version 21
+%global minor_version 23
 %global micro_version 4
 
 %define debug_package %{nil}
@@ -12,7 +12,7 @@ License:	MIT
 URL:		https://gitea.io
 
 Source0:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-src-%{version}.tar.gz
-Source1:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-docs-%{version}.tar.gz
+#Source1:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-docs-%{version}.tar.gz
 Source2:	gitea.service
 Source3:  gitea.firewalld
 Source4:  README.EL+Fedora
@@ -20,8 +20,8 @@ Source5:  gitea.httpd
 Source6:  gitea.nginx
 Source7:  gitea.caddy
 Source8:  gitea.sysusers
-Source9:	https://github.com/go-gitea/gitea/releases/download/v%{version}/%{name}-%{version}-linux-amd64
-
+Source9:  gitea.profile.sh
+Source10:  gitea.profile.csh
 
 Patch1:		0001-gitea.app.ini.patch
 
@@ -79,15 +79,15 @@ Requires: caddy >= 2.0.0
 This subpackage contains an caddy configuration file that can be used to reverse
 proxy for Gitea.
 
-%package docs
-Summary: Documentation for %{name}
+#package docs
+#Summary: Documentation for %{name}
 
-%description docs
-This subpackage contains the Gitea documentation from https://docs.gitea.io
+#%description docs
+#This subpackage contains the Gitea documentation from https://docs.gitea.io
 
 %prep
 %setup -q -n %{name}-src-%{version}
-%patch1 -p1
+%autopatch -p1
 
 install -m 0644 %{SOURCE4} .
 for file in $(find . -type f -name "*.css"); do
@@ -102,7 +102,7 @@ ls
 
 # Probably not needed, but just in case I guess.
 #TAGS="${TAGS}" LDFLAGS="${LDFLAGS}" make build
-cp %{SOURCE9} gitea
+# prebuilt binary is prepared in %%prep (see below)
 
 %install
 install -D -m 755 gitea $RPM_BUILD_ROOT%{_bindir}/gitea
@@ -124,6 +124,7 @@ mkdir -p $RPM_BUILD_ROOT%{_datadir}/gitea \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/data/avatars \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/data/attachments \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/data/repo-avatars \
+  $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/https \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/indexers \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/indexers/issues.bleve \
   $RPM_BUILD_ROOT%{_localstatedir}/lib/gitea/indexers/issues.queue \
@@ -137,13 +138,15 @@ cp -r options $RPM_BUILD_ROOT%{_datadir}/gitea/
 cp -r public $RPM_BUILD_ROOT%{_datadir}/gitea/
 cp -r templates $RPM_BUILD_ROOT%{_datadir}/gitea/
 #cp -r web_src/less $RPM_BUILD_ROOT%{_datadir}/gitea/public
-install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/docs.gitea.io/
-tar -xvzf %{SOURCE1} -C $RPM_BUILD_ROOT%{_datadir}/%{name}/docs.gitea.io
+#install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/docs.gitea.io/
 
 mkdir -p $RPM_BUILD_ROOT%{_tmpfilesdir}/
 cat > $RPM_BUILD_ROOT%{_tmpfilesdir}/%{name}.conf <<EOF
 d /run/gitea 0755 git git -
 EOF
+
+install -D -m 644 %{SOURCE9} %{buildroot}%{_sysconfdir}/profile.d/gitea.sh
+install -D -m 644 %{SOURCE10} %{buildroot}%{_sysconfdir}/profile.d/gitea.csh
 
 %pre
 # Not official
@@ -169,12 +172,14 @@ systemd-tmpfiles --create %{name}.conf || :
 %files
 %doc README.EL+Fedora README.md custom/conf/app.example.ini
 %license LICENSE
-%exclude %{_datadir}/%{name}/docs.gitea.io
+#exclude %{_datadir}/%{name}/docs.gitea.io
 %{_unitdir}/gitea.service
 %{_bindir}/gitea
 %{_prefix}/lib/firewalld/services/%{name}.xml
 %{_tmpfilesdir}/%{name}.conf
 %{_sysusersdir}/%{name}.conf
+# setting this as config as users may manipulate it
+%config %{_sysconfdir}/profile.d/gitea.*sh
 
 %defattr(0660,root,git,770)
 %dir %{_sysconfdir}/gitea
@@ -197,10 +202,37 @@ systemd-tmpfiles --create %{name}.conf || :
 %files caddy
 %config(noreplace) %{_sysconfdir}/caddy/Caddyfile.d/%{name}.caddyfile
 
-%files docs
-%{_datadir}/%{name}/docs.gitea.io
+#files docs
+#{_datadir}/%{name}/docs.gitea.io
 
 %changelog
+* Tue Feb 18 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.4-1
+- Update to 1.23.4
+
+* Wed Feb 05 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.2-1
+- Update to 1.23.2
+
+* Thu Jan 09 2025 Louis Abel <tucklesepk@gmail.com> - 1.23.0-1
+- Update to 1.23.0
+
+* Wed Dec 11 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.5-1
+- Update to 1.22.5
+
+* Mon Nov 25 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.4-1
+- Update to 1.22.4
+
+* Thu Nov 07 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.3-1
+- Update to 1.22.3
+
+* Fri May 31 2024 Louis Abel <tucklesepk@gmail.com> - 1.22.0-1
+- Update to 1.22.0
+
+* Mon Apr 15 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.11-1
+- Update to 1.21.11
+
+* Mon Feb 26 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.7-1
+- Update to 1.21.7
+
 * Tue Jan 16 2024 Louis Abel <tucklesepk@gmail.com> - 1.21.4-1
 - Update to 1.21.4
 
